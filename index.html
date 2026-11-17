@@ -1,0 +1,728 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>SaveSync 日本語ガイド</title>
+<meta name="description" content="Moon Sweepers を3人でホスト交代しながら遊ぶための SaveSync 日本語ガイド（非公式）">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --surface-2: #eef1f8;
+    --text: #1f2433;
+    --muted: #5b6275;
+    --line: #dde1ec;
+    --accent: #3b6fd8;
+    --accent-soft: #e3ebfb;
+    --mint: #1f9d7a;
+    --mint-soft: #ddf3ec;
+    --warn: #b4530a;
+    --warn-soft: #fff1e0;
+    --danger: #c0323a;
+    --danger-soft: #fde7e8;
+    --unk: #6b5bc4;
+    --unk-soft: #ece9fb;
+    --hero-1: #20264a;
+    --hero-2: #3a4580;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12141c;
+      --surface: #1b1e29;
+      --surface-2: #232736;
+      --text: #e7e9f1;
+      --muted: #a2a8ba;
+      --line: #2f3446;
+      --accent: #7ea3f2;
+      --accent-soft: #24304d;
+      --mint: #5fd1ae;
+      --mint-soft: #1b3830;
+      --warn: #f2a65a;
+      --warn-soft: #3a2a1a;
+      --danger: #f07a80;
+      --danger-soft: #3d2023;
+      --unk: #b2a6f5;
+      --unk-soft: #2a2645;
+      --hero-1: #0d1022;
+      --hero-2: #232a55;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: var(--accent); }
+  img { max-width: 100%; }
+
+  /* ヘッダー */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 10px 16px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .brand { font-weight: 700; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .toc-btn {
+    display: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer;
+  }
+
+  /* ヒーロー */
+  .hero {
+    position: relative; overflow: hidden;
+    background: radial-gradient(circle at 85% 20%, #f4f1e4 0 46px, transparent 47px),
+                linear-gradient(160deg, var(--hero-1), var(--hero-2));
+    color: #fff; padding: 56px 16px 64px;
+  }
+  .hero::before {
+    /* 星 */
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(2px 2px at 10% 30%, #fff8 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 30% 70%, #fff9 50%, transparent 51%),
+      radial-gradient(2px 2px at 55% 20%, #fff7 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 70% 60%, #fff8 50%, transparent 51%),
+      radial-gradient(2px 2px at 92% 75%, #fff6 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 45% 45%, #fff6 50%, transparent 51%);
+  }
+  .hero::after {
+    /* 月面の地平線 */
+    content: ""; position: absolute; left: -10%; right: -10%; bottom: -60px; height: 110px;
+    background: radial-gradient(ellipse at 50% 0, #cfd3df 0, #9ea4b6 70%);
+    border-radius: 50% 50% 0 0;
+    opacity: .9;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; }
+  .hero .eyebrow { display: inline-block; font-size: 13px; letter-spacing: .08em; background: #ffffff22; padding: 2px 10px; border-radius: 999px; }
+  .hero h1 { font-size: clamp(26px, 5vw, 40px); line-height: 1.35; margin: 14px 0 10px; }
+  .hero p { margin: 0; max-width: 640px; color: #e5e8f5; }
+  .hero .meta { margin-top: 16px; font-size: 13px; color: #c9cee6; }
+
+  /* レイアウト */
+  .layout { max-width: 1120px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; }
+  nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; }
+  nav.toc .toc-title { font-size: 13px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  nav.toc li a {
+    display: block; padding: 6px 10px; border-radius: 8px; text-decoration: none; color: var(--muted); font-size: 14px; line-height: 1.5;
+  }
+  nav.toc li a:hover { background: var(--surface-2); color: var(--text); }
+  nav.toc li a.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+  main { min-width: 0; }
+  section {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px 22px; margin-bottom: 24px;
+  }
+  section > h2 {
+    margin: 0 0 14px; font-size: 22px; line-height: 1.4; display: flex; align-items: center; gap: 10px;
+  }
+  section > h2 .num {
+    flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: inline-grid; place-items: center; font-size: 15px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  h3 { font-size: 18px; margin: 26px 0 8px; padding-left: 10px; border-left: 4px solid var(--accent); line-height: 1.5; }
+  h4 { font-size: 16px; margin: 18px 0 6px; }
+  p { margin: 0 0 12px; }
+  ul, ol { padding-left: 1.4em; margin: 0 0 12px; }
+  li { margin-bottom: 4px; }
+  code, .ui {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: .9em; white-space: nowrap;
+  }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* ラベル */
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; vertical-align: 2px; margin-right: 4px; white-space: nowrap; }
+  .tag.official { background: var(--mint-soft); color: var(--mint); }
+  .tag.rule { background: var(--accent-soft); color: var(--accent); }
+  .tag.unknown { background: var(--unk-soft); color: var(--unk); }
+  .tag.infer { background: var(--warn-soft); color: var(--warn); }
+
+  /* 注意ボックス */
+  .box { border-radius: 12px; padding: 14px 16px; margin: 14px 0; border: 1px solid; }
+  .box > :last-child { margin-bottom: 0; }
+  .box .box-title { font-weight: 700; margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
+  .box.danger { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .box.danger .box-title { color: var(--danger); }
+  .box.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .box.warn .box-title { color: var(--warn); }
+  .box.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .box.info .box-title { color: var(--accent); }
+  .box.unknown { background: var(--unk-soft); border-color: color-mix(in srgb, var(--unk) 35%, transparent); }
+  .box.unknown .box-title { color: var(--unk); }
+
+  /* 凡例 */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 14px; margin: 8px 0 4px; }
+
+  /* 表 */
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 480px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 700; }
+
+  /* ステップ（縦フロー） */
+  .steps { list-style: none; padding: 0; margin: 16px 0; counter-reset: step; }
+  .steps > li {
+    position: relative; padding: 0 0 18px 52px; margin: 0;
+  }
+  .steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700;
+    background: var(--accent); color: #fff;
+  }
+  .steps > li::after {
+    content: ""; position: absolute; left: 17px; top: 38px; bottom: 2px; width: 2px; background: var(--line);
+  }
+  .steps > li:last-child::after { display: none; }
+  .steps > li .st { font-weight: 700; display: block; margin-bottom: 2px; padding-top: 5px; }
+  .steps > li.who-a::before { background: #d9822b; }
+  .steps > li.who-b::before { background: #2f9e6f; }
+  .steps > li.who-c::before { background: #7a5bd1; }
+
+  /* プレイヤーバッジ */
+  .p { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 13px; vertical-align: -5px; }
+  .p.a { background: #d9822b; } .p.b { background: #2f9e6f; } .p.c { background: #7a5bd1; }
+
+  /* 仕組み図 */
+  .diagram {
+    display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px;
+    background: var(--surface-2); border-radius: 12px; padding: 16px; margin: 14px 0; text-align: center;
+  }
+  .node { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; font-size: 14px; line-height: 1.5; }
+  .node b { display: block; font-size: 15px; }
+  .arrow { color: var(--muted); font-size: 20px; }
+
+  /* ホスト交代のローテーション図 */
+  .rotation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+  .round { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .round .rh { background: var(--surface-2); padding: 6px 10px; font-weight: 700; font-size: 14px; }
+  .round .rb { padding: 10px; font-size: 14px; }
+  .round .host { display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 6px; }
+  .round .world { margin-top: 8px; font-size: 13px; background: var(--mint-soft); color: var(--mint); border-radius: 8px; padding: 4px 8px; }
+
+  /* ケースカード */
+  .case { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+  .case h4 { margin-top: 0; }
+  .case dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; }
+  .case dt { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .case dd { margin: 0; }
+
+  /* チェックリスト */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 10px 8px 40px; position: relative; border-bottom: 1px dashed var(--line); margin: 0; }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist input { position: absolute; left: 10px; top: 13px; width: 18px; height: 18px; accent-color: var(--mint); }
+  .checklist label { cursor: pointer; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface); }
+  .card h4 { margin-top: 0; }
+
+  details { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 10px 0; background: var(--surface); }
+  details summary { cursor: pointer; font-weight: 700; }
+  details[open] summary { margin-bottom: 8px; }
+
+  footer { text-align: center; font-size: 13px; color: var(--muted); padding: 0 16px 40px; }
+
+  /* スマホ */
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; padding-top: 16px; }
+    .toc-btn { display: inline-block; }
+    nav.toc {
+      position: fixed; top: 54px; left: 0; right: 0; max-height: 70vh; z-index: 19;
+      background: var(--surface); border-bottom: 1px solid var(--line); padding: 12px 16px;
+      box-shadow: 0 10px 30px #0003; display: none;
+    }
+    nav.toc.open { display: block; }
+    section { padding: 20px 16px; }
+    .diagram { grid-template-columns: 1fr; }
+    .diagram .arrow { transform: rotate(90deg); }
+    .rotation, .two-col { grid-template-columns: 1fr; }
+    .case dl { grid-template-columns: 1fr; }
+    .case dt { margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span aria-hidden="true">🌙🧹</span> SaveSync 日本語ガイド</a>
+  <button class="toc-btn" type="button" aria-expanded="false" aria-controls="toc">目次</button>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-inner">
+    <span class="eyebrow">Moon Sweepers × SaveSync ／ 非公式ガイド</span>
+    <h1>3人でホストを交代しながら<br>同じ月面ワールドを掃除しよう</h1>
+    <p>SaveSync でセーブデータを共有して、誰がホストでも同じワールドの続きを遊べるようにするための日本語マニュアルです。</p>
+    <p class="meta">情報の確認日：2026年11月17日 ／ SaveSync は早期アクセス中のため、仕様が変わることがあります。</p>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="目次">
+    <div class="toc-title">目次</div>
+    <ol>
+      <li><a href="#about">1. このガイドの読み方</a></li>
+      <li><a href="#what">2. SaveSyncとは？</a></li>
+      <li><a href="#install">3. 導入方法</a></li>
+      <li><a href="#setup">4. 最初の共有設定</a></li>
+      <li><a href="#flow">5. 毎回の遊び方</a></li>
+      <li><a href="#rotation">6. 3人でホストを交代する</a></li>
+      <li><a href="#conflict">7. セーブデータの競合</a></li>
+      <li><a href="#rules">8. 3人の運用ルール（提案）</a></li>
+      <li><a href="#unknown">9. 未確認事項の一覧</a></li>
+      <li><a href="#sources">10. 参照元</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <!-- 1 -->
+    <section id="about">
+      <h2><span class="num">1</span>このガイドの読み方</h2>
+      <p>公式に書かれていることと、私たちが決めるルールや推測を混ぜないように、次のラベルを付けています。</p>
+      <div class="legend">
+        <span><span class="tag official">公式</span>公式サイト・公式ガイドに書かれている</span>
+        <span><span class="tag rule">ルール</span>3人で決める運用ルール（SaveSyncの機能ではない）</span>
+        <span><span class="tag infer">推測</span>公式の記述から考えられること（確定ではない）</span>
+        <span><span class="tag unknown">未確認</span>公式情報が見つからなかった</span>
+      </div>
+      <div class="box warn">
+        <div class="box-title">⚠ 「savesync.app」は別のソフトです</div>
+        <p>このガイドで扱う SaveSync（Steam で販売）の公式サイトは <a href="https://savesync.games/" target="_blank" rel="noopener">savesync.games</a> です。よく似た名前の <code>savesync.app</code> は「Embervault」という別のソフトのサイトなので、混同しないでください（2026-11-17 確認）。</p>
+      </div>
+      <div class="box info">
+        <div class="box-title">ℹ 実際の画面について</div>
+        <p>このページには画面の画像を載せていません。実際の画面は、各ステップにリンクした公式ガイド（英語・スクリーンショット付き）で確認してください。</p>
+      </div>
+    </section>
+
+    <!-- 2 -->
+    <section id="what">
+      <h2><span class="num">2</span>SaveSyncとは？</h2>
+
+      <h3>どんなソフト？</h3>
+      <p><span class="tag official">公式</span>SaveSync は、協力プレイ（Co-op）のゲーム向けに<strong>セーブデータの同期・バックアップ・共有</strong>をするツールです。元のホストがいなくても、グループの誰もが続きから遊べるようにすることを目的としています。</p>
+      <ul>
+        <li><span class="tag official">公式</span>Steam で販売されています（買い切り）。早期アクセス中ですが、同期とホスト交代の機能はすでに使えます。</li>
+        <li><span class="tag official">公式</span>Moon Sweepers は<strong>対応ゲーム</strong>に入っています。</li>
+        <li><span class="tag official">公式</span>対応 OS は Windows です（Linux は Proton 経由）。</li>
+      </ul>
+
+      <h3>何が困っていて、何が解決するの？</h3>
+      <div class="two-col">
+        <div class="card">
+          <h4>😢 SaveSync がない場合</h4>
+          <p><span class="tag official">公式</span>Moon Sweepers のワールドは、<strong>ホストした人のPC</strong>の中にある5つのスロットのどれかに保存されます。ほかの人はコピーを持っていません。</p>
+          <p>そのため、ワールドの持ち主（例：A）がいない日は、B と C だけでは続きを遊べません。</p>
+        </div>
+        <div class="card">
+          <h4>😊 SaveSync を使う場合</h4>
+          <p><span class="tag official">公式</span>ホストのセーブを SaveSync にアップロードして友だちと共有すると、<strong>次は誰でもホストになれます</strong>。元のホストがオフラインでも大丈夫です。</p>
+          <p><span class="tag official">公式</span>どのバージョンも自動でバックアップされ、前の状態に戻すこともできます。</p>
+        </div>
+      </div>
+
+      <h3>ゲーム内のマルチプレイとの違い</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>ゲーム内のマルチプレイ</th><th>SaveSync</th></tr></thead>
+          <tbody>
+            <tr><th>役割</th><td>みんなで<strong>同時に</strong>遊ぶための通信</td><td>遊んでいない間に<strong>セーブデータを受け渡す</strong>ための道具</td></tr>
+            <tr><th>セーブの場所</th><td>ホストのPCだけ</td><td>Steam ワークショップ上に共有コピー（暗号化・非公開）</td></tr>
+            <tr><th>ゲームとの関係</th><td>ゲームの機能</td><td><span class="tag official">公式</span>ゲームの代わりにはならない。ゲームと<strong>一緒に</strong>使う</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p>実際に一緒に遊ぶのは、これまでどおりゲーム内のマルチプレイです。SaveSync は「誰がホストしてもセーブを最新にしておく係」と考えると分かりやすいです。</p>
+
+      <h3>ホスト交代ができる仕組み</h3>
+      <div class="diagram" role="img" aria-label="ホストのPCから Steam ワークショップを経由して次のホストのPCにセーブが渡る図">
+        <div class="node"><b>今回のホスト</b>遊び終わったセーブ</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>SaveSync</b>Steam ワークショップに<br>暗号化して保存</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>次のホスト</b>最新のセーブで<br>ホストを開始</div>
+      </div>
+      <ul>
+        <li><span class="tag official">公式</span>共有されたセーブは、それぞれのPCで<strong>「Activate（有効化）」</strong>するとゲームのスロットに置かれ、そのセーブのホストが自動で切り替わります。</li>
+        <li><span class="tag official">公式</span>Moon Sweepers では、ゲームが「ホストのキャラクター」と「参加者のキャラクター（Steam ID ごと）」を分けて記録しています。別の人がホストになると、SaveSync が<strong>新しいホストに本人のキャラクターを割り当て、前のホストのキャラクターをその人の Steam ID 側に戻します</strong>。そのため前のホストも、自分のキャラクターのまま参加できます。</li>
+        <li><span class="tag official">公式</span>セーブは Steam ワークショップに暗号化された状態で、一覧に表示されない非公開設定で保存されます。アップロードとダウンロードの前には Windows Defender でスキャンされます。</li>
+      </ul>
+    </section>
+
+    <!-- 3 -->
+    <section id="install">
+      <h2><span class="num">3</span>導入方法</h2>
+
+      <h3>必要なもの</h3>
+      <ul>
+        <li><span class="tag official">公式</span>Steam アカウント（SaveSync 用の別アカウントはありません）</li>
+        <li><span class="tag official">公式</span>Windows 10 以降（64bit）、または Linux（Proton 経由）</li>
+        <li><span class="tag official">公式</span>価格：¥700（2026-11-17 時点の Steam ストア表示・買い切り。早期アクセス終了後も同じ価格と開発者が表明）</li>
+      </ul>
+      <div class="box unknown">
+        <div class="box-title">？ 3人全員が購入する必要がある？</div>
+        <p><span class="tag unknown">未確認</span>「全員が購入する必要がある」とはっきり書かれた公式情報は見つかりませんでした。</p>
+        <p><span class="tag infer">推測</span>ただし公式ガイドでは、共有を受け取る友だちも<strong>自分の SaveSync を起動して「Activate」を押す</strong>手順になっています。ホストを交代したいなら、<strong>3人それぞれが SaveSync を持っている必要がある</strong>と考えておくのが安全です。</p>
+      </div>
+
+      <h3>インストールと起動</h3>
+      <ol class="steps">
+        <li><span class="st">Steam で SaveSync を購入する</span><a href="https://store.steampowered.com/app/3832010/" target="_blank" rel="noopener">Steam ストアページ</a>から購入します。</li>
+        <li><span class="st">Steam ライブラリからインストールする</span>ほかのゲームと同じように、ライブラリからインストールします。</li>
+        <li><span class="st">起動する</span><span class="tag official">公式</span>Steam ライブラリから起動するか、タスクバー右下（システムトレイ）の SaveSync アイコンをクリックします。ゲーム一覧が出たホーム画面が表示されます。</li>
+      </ol>
+      <div class="box unknown">
+        <div class="box-title">？ 初期設定・ログインについて</div>
+        <p><span class="tag official">公式</span>SaveSync 専用のアカウント登録はなく、Steam アカウントを使います。フレンドリストなども、PC の Steam から読み取ります。</p>
+        <p><span class="tag unknown">未確認</span>初回起動時に何かを設定する画面が出るかどうかは、公式の資料に書かれていませんでした。</p>
+      </div>
+    </section>
+
+    <!-- 4 -->
+    <section id="setup">
+      <h2><span class="num">4</span>最初の共有設定（1回だけ）</h2>
+      <p>ここでは、今のワールドを持っている人を <span class="p a">A</span>、共有を受け取る人を <span class="p b">B</span> <span class="p c">C</span> として説明します。</p>
+      <div class="box danger">
+        <div class="box-title">⛔ SaveSync を操作するときはゲームを完全に終了しておく</div>
+        <p><span class="tag official">公式</span>SaveSync は<strong>ゲームが起動していないときだけ</strong>動作します。SaveSync の操作は、必ず Moon Sweepers を終了してから行ってください。</p>
+      </div>
+
+      <h3><span class="p a">A</span> ワールドを SaveSync に登録する</h3>
+      <ol class="steps">
+        <li class="who-a"><span class="st">Moon Sweepers を完全に終了する</span></li>
+        <li class="who-a"><span class="st">SaveSync を開き、左のゲーム一覧から Moon Sweepers を選ぶ</span></li>
+        <li class="who-a"><span class="st">右上の <span class="ui">+ New Save</span> をクリックする</span></li>
+        <li class="who-a"><span class="st">共有したいワールドを選んで <span class="ui">Create Save</span> をクリックする</span><span class="tag official">公式</span>ゲーム内ではワールドに名前を付けられないため、ゲームのメニューと同じ内容（所持金・掃除済みの地域・プレイ時間）とスロット番号で表示されます。</li>
+        <li class="who-a"><span class="st">同期が終わるまで待つ</span><span class="tag official">公式</span><strong>緑のチェックマーク</strong>が出たら完了です。それまでは次の共有の手順に進まないでください。</li>
+      </ol>
+
+      <h3><span class="p a">A</span> B と C に共有する</h3>
+      <ol class="steps">
+        <li class="who-a"><span class="st">セーブの行にある共有アイコンをクリックする</span></li>
+        <li class="who-a"><span class="st">友だちの Steam ユーザー名で検索する</span></li>
+        <li class="who-a"><span class="st">検索結果から友だちを選んで <span class="ui">Share</span> をクリックする</span>B と C の2人に、それぞれ共有します。</li>
+      </ol>
+      <div class="box warn">
+        <div class="box-title">⚠ 共有の取り消しについて</div>
+        <p><span class="tag official">公式</span>共有した相手は、セーブをダウンロードして自分のコピーとして持ち、変更することもできます。あとで共有を取り消しても、<strong>相手がすでに持っているコピーは消えません</strong>。共有するのは信頼できる友だちだけにしましょう。</p>
+      </div>
+
+      <h3><span class="p b">B</span> <span class="p c">C</span> 共有されたセーブを有効化する</h3>
+      <ol class="steps">
+        <li class="who-b"><span class="st">Moon Sweepers を終了した状態で SaveSync を開く</span></li>
+        <li class="who-b"><span class="st">Moon Sweepers の一覧に、A から共有されたセーブがあるか確認する</span></li>
+        <li class="who-b"><span class="st"><span class="ui">Activate</span> をクリックし、使うスロットを選んでもう一度 <span class="ui">Activate</span> をクリックする</span><span class="tag official">公式</span>Moon Sweepers では空いているスロットに入るので、自分のほかのワールドが上書きされることはありません。</li>
+      </ol>
+      <div class="box warn">
+        <div class="box-title">⚠ スロットが5つとも埋まっているとき</div>
+        <p><span class="tag official">公式</span>Moon Sweepers のスロット5つがすべて埋まっていると、有効化はできません。先に別のセーブを<strong>無効化（Deactivate）</strong>して、スロットを空けてください。</p>
+      </div>
+      <p class="small">画面つきの手順：<a href="https://savesync.games/games/moon-sweepers/" target="_blank" rel="noopener">公式 Moon Sweepers ページ</a> ／ <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3828844820" target="_blank" rel="noopener">公式 Steam ガイド（Moon Sweepers）</a> ／ <a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3584825910" target="_blank" rel="noopener">公式 Steam ガイド（全般）</a>（いずれも英語）</p>
+    </section>
+
+    <!-- 5 -->
+    <section id="flow">
+      <h2><span class="num">5</span>毎回の遊び方</h2>
+      <p>最初の共有設定が終わったあと、毎回の遊び方です。</p>
+      <div class="box unknown">
+        <div class="box-title">？ 同期がいつ行われるのかは未確認</div>
+        <p><span class="tag official">公式</span>「セーブは自動で同期される」とは書かれています。</p>
+        <p><span class="tag unknown">未確認</span>ただ、<strong>どのタイミングで</strong>アップロード・ダウンロードされるのか（ゲーム終了時か、SaveSync を起動したときか、常に裏で動いているか）は、公式の資料に書かれていませんでした。手動でアップロードするボタンがあるかも未確認です。</p>
+        <p>そのため下の手順では、<strong>SaveSync の画面で緑のチェックマークを目で確認する</strong>ことを毎回の決まりにしています。</p>
+      </div>
+
+      <ol class="steps">
+        <li><span class="st">プレイ前：SaveSync を開いて最新の状態か確認する</span>Moon Sweepers が終了していることを確かめてから SaveSync を開きます。セーブが同期済み（緑のチェックマーク）になっているか確認します。<span class="tag rule">ルール</span>同期中の表示なら、終わるまで待ちます。</li>
+        <li><span class="st">今回のホストが Moon Sweepers を起動する</span>今回ホストする人のPCで、そのセーブが有効化されている（スロットに入っている）ことを確認してから起動します。</li>
+        <li><span class="st">マルチプレイを開始する</span>ホストがワールドを開き、ほかの2人はゲーム内のマルチプレイで参加します。</li>
+        <li><span class="st">プレイを終える</span>ゲーム内でセーブされたことを確認してから、<strong>Moon Sweepers を完全に終了</strong>します。</li>
+        <li><span class="st">SaveSync にアップロードされるのを待つ</span>ホストが SaveSync を開き、セーブがアップロードされるのを待ちます（上の「未確認」のとおり、自動でアップロードされるタイミングは分かっていません）。</li>
+        <li><span class="st">同期が終わったことを確認する</span><strong>緑のチェックマーク</strong>が出ていれば完了です。必要なら、セーブ履歴でいちばん新しい記録が自分の名前・今の時刻になっているかも確認します。</li>
+        <li><span class="st">次の人に引き継ぐ</span><span class="tag rule">ルール</span>Discord で「同期完了」と報告します。これで、次は誰がホストしても続きから遊べます。</li>
+      </ol>
+      <div class="box danger">
+        <div class="box-title">⛔ 同期が終わる前にPCをシャットダウンしない</div>
+        <p>アップロードが終わる前にPCを切ると、次の人が古いセーブで遊ぶことになりかねません。緑のチェックマークを確認するまではPCを切らないでください。</p>
+      </div>
+    </section>
+
+    <!-- 6 -->
+    <section id="rotation">
+      <h2><span class="num">6</span>3人でホストを交代する</h2>
+      <p>同期が終わっていれば、誰がホストになっても同じワールドの続きから遊べます。</p>
+
+      <div class="rotation">
+        <div class="round">
+          <div class="rh">1回目</div>
+          <div class="rb">
+            <div class="host"><span class="p a">A</span> ホスト</div>
+            参加：<span class="p b">B</span> <span class="p c">C</span>
+            <div class="world">終了後 A が同期 → 緑チェック ✔</div>
+          </div>
+        </div>
+        <div class="round">
+          <div class="rh">2回目</div>
+          <div class="rb">
+            <div class="host"><span class="p b">B</span> ホスト</div>
+            参加：<span class="p a">A</span> <span class="p c">C</span>
+            <div class="world">終了後 B が同期 → 緑チェック ✔</div>
+          </div>
+        </div>
+        <div class="round">
+          <div class="rh">3回目</div>
+          <div class="rb">
+            <div class="host"><span class="p c">C</span> ホスト</div>
+            参加：<span class="p a">A</span> <span class="p b">B</span>
+            <div class="world">終了後 C が同期 → 緑チェック ✔</div>
+          </div>
+        </div>
+      </div>
+
+      <h3>例：2回目（B がホスト、A は不在で C と2人）</h3>
+      <ol class="steps">
+        <li class="who-a"><span class="st">前回のホスト A：同期の完了を確認して報告済み</span>前回の終わりに緑チェックを確認し、Discord で報告しておきます。</li>
+        <li class="who-b"><span class="st">B：Discord で「今からホストします」と宣言する</span><span class="tag rule">ルール</span></li>
+        <li class="who-b"><span class="st">B：ゲームを終了した状態で SaveSync を開き、セーブが有効化されていて同期済みか確認する</span><span class="tag official">公式</span>有効化したPCにホストが自動で切り替わります。</li>
+        <li class="who-b"><span class="st">B：Moon Sweepers を起動してワールドを開く</span></li>
+        <li class="who-c"><span class="st">C：ゲーム内のマルチプレイで B のワールドに参加する</span><span class="tag official">公式</span>SaveSync がキャラクターを入れ替えてくれるので、B は自分のキャラクター、前のホストの A も（参加したときは）自分のキャラクターのままです。</li>
+        <li class="who-b"><span class="st">B：遊び終わったらゲームを終了し、SaveSync で緑チェックを確認して報告する</span></li>
+      </ol>
+      <p>A がいなくても、B と C だけで遊べます。次に A が参加するときも、同期済みの最新ワールドから続けられます。</p>
+
+      <div class="box unknown">
+        <div class="box-title">？ 交代のたびに「Activate」を押し直す必要がある？</div>
+        <p><span class="tag unknown">未確認</span>一度有効化したセーブを次に使うときに、もう一度「Activate」を押す必要があるのか、自動で最新版に置き換わるのかは、公式の資料からは分かりませんでした。</p>
+        <p>また、ホストではない参加者が SaveSync を起動しておく必要があるかどうかも未確認です。最初の回で実際に画面を見て確かめ、分かったことを3人で共有しておくと安心です。</p>
+      </div>
+    </section>
+
+    <!-- 7 -->
+    <section id="conflict">
+      <h2><span class="num">7</span>セーブデータの競合（いちばん大事）</h2>
+
+      <div class="box danger">
+        <div class="box-title">⛔ 2つのセーブが自動で合体（マージ）されることは期待しない</div>
+        <p><span class="tag official">公式</span>SaveSync の利用規約には、<strong>同期によってセーブデータが上書きされたり失われたりすることがある（グループメンバー間の競合も含む）</strong>と書かれています。</p>
+        <p><span class="tag unknown">未確認</span>2人が別々に遊んだ場合に「両方の進行を統合する」のか「どちらか一方を選ぶ」のか、どちらが優先されるのか、警告が出るのか――といった競合時の動作は、公式の資料に<strong>書かれていませんでした</strong>。</p>
+        <p><span class="tag infer">推測</span>マージ機能についての記述はどこにもありません。そのため、<strong>競合が起きたらどちらかの進行が失われる</strong>前提で運用するのが安全です。</p>
+      </div>
+
+      <p><span class="tag official">公式</span>頼りになるのは<strong>セーブ履歴</strong>です。いつ・誰がセーブを変更したかの履歴をすべて見ることができ、<strong>以前のバージョンに戻せます</strong>。</p>
+
+      <div class="case">
+        <h4>ケース1：A が遊んだあとに B が遊ぶ</h4>
+        <dl>
+          <dt>どうなる</dt><dd>これが SaveSync の本来の使い方です。A が終了して同期が終わってから B が始めれば、B は A の続きから遊べます。</dd>
+          <dt>気をつけること</dt><dd>B は、A の同期が終わる（緑チェック・Discord 報告）<strong>まで待ってから</strong>ゲームを起動します。</dd>
+        </dl>
+      </div>
+
+      <div class="case">
+        <h4>ケース2：A と B がそれぞれ別々に同じワールドを進めた</h4>
+        <dl>
+          <dt>どうなる</dt><dd><span class="tag unknown">未確認</span>公式の資料に書かれていません。<span class="tag infer">推測</span>同じワールドから2つの未来に分かれるので、あとから同期された方が先の方を上書きし、片方の進行が失われるおそれがあります。</dd>
+          <dt>対処</dt><dd>セーブ履歴で両方の版を確認し、3人で話し合って<strong>どちらの進行を残すか</strong>を決め、必要なら履歴から戻します。</dd>
+          <dt>予防</dt><dd><span class="tag rule">ルール</span>同じワールドを遊ぶのは「ホスト宣言」をした1人だけにします。別々の時間にソロで遊びたいときは、<strong>共有ワールドではなく自分用の別ワールドを使います</strong>。</dd>
+        </dl>
+      </div>
+
+      <div class="case">
+        <h4>ケース3：同期を忘れてゲームを起動してしまった</h4>
+        <dl>
+          <dt>どうなる</dt><dd><span class="tag unknown">未確認</span>公式の資料に書かれていません。<span class="tag infer">推測</span>手元にある古いワールドで遊び始めてしまうおそれがあります。</dd>
+          <dt>対処</dt><dd>気づいたらすぐにセーブせずに終了し、SaveSync を開いて同期の状態を確認します。<strong>遊んでしまった場合は Discord で報告</strong>し、あとから履歴で正しい版を選び直します。</dd>
+          <dt>予防</dt><dd><span class="tag rule">ルール</span>「ゲームより先に SaveSync を開く」を習慣にします。</dd>
+        </dl>
+      </div>
+
+      <div class="case">
+        <h4>ケース4：古いセーブで上書きしてしまった</h4>
+        <dl>
+          <dt>どうなる</dt><dd>新しい進行が古い版で上書きされた状態になります。</dd>
+          <dt>対処</dt><dd><span class="tag official">公式</span>セーブ履歴から、上書きされる前の版（誰が・いつ変更したかが表示されます）を選んで<strong>戻します（Revert）</strong>。戻したあとは、3人とも緑チェックを確認してから次のプレイを始めます。</dd>
+          <dt>未確認</dt><dd><span class="tag unknown">未確認</span>履歴が何世代・何日分残るかは公式の資料に書かれていません。気づいたら早めに戻しましょう。</dd>
+        </dl>
+      </div>
+
+      <div class="case">
+        <h4>ケース5：同期に失敗した</h4>
+        <dl>
+          <dt>症状と原因</dt><dd><span class="tag official">公式</span>アップロードが <strong>10%〜20% の間を行ったり来たりして終わらない</strong>ことがあります。SaveSync は Steam ワークショップのサーバーを使ってアップロードしているため、Steam のダウンロード地域や配信経路が原因になることがあります。</dd>
+          <dt>公式の対処法</dt><dd>
+            <ol>
+              <li>SaveSync を閉じる</li>
+              <li>Steam の「設定」→「ダウンロード」で、ダウンロード地域を次のどれかに変える：Singapore／Tokyo／Hong Kong／US – Seattle／US – Los Angeles</li>
+              <li>Steam を再起動し、地域の設定が変わったままか確認する</li>
+              <li>SaveSync を開いて、もう一度試す</li>
+            </ol>
+          </dd>
+          <dt>それでもだめなとき</dt><dd><span class="tag rule">ルール</span>同期できなかったことを Discord で報告し、<strong>解決するまでほかの人はそのワールドで遊ばない</strong>ようにします。困ったときは公式 Discord（Steam ストアページからリンクされています）に相談できます。</dd>
+        </dl>
+      </div>
+    </section>
+
+    <!-- 8 -->
+    <section id="rules">
+      <h2><span class="num">8</span>3人の運用ルール（提案）</h2>
+      <div class="box info">
+        <div class="box-title">ℹ ここは SaveSync の機能ではありません</div>
+        <p>この章のルールは、事故を防ぐために<strong>3人で決める約束</strong>の提案です。SaveSync が自動でやってくれるものではありません。</p>
+      </div>
+
+      <h3>基本ルール <span class="tag rule">ルール</span></h3>
+      <ol>
+        <li><strong>ホストは1人だけ</strong>：遊ぶ前に Discord で「今から○○がホストします」と宣言する。宣言がない間は、誰も共有ワールドを起動しない。</li>
+        <li><strong>ゲームより先に SaveSync</strong>：起動する前に SaveSync を開き、緑チェックで最新になっていることを確認する。</li>
+        <li><strong>終わったら同期完了まで見届ける</strong>：ゲームを完全に終了し、緑チェックが出るまでPCを切らない。</li>
+        <li><strong>同期完了を報告</strong>：Discord で「同期完了」と書く。これが次のホストへのバトン。</li>
+        <li><strong>ソロで遊ぶときは別ワールド</strong>：共有ワールドを1人で進めたいときは、先に宣言する。勝手に進めない。</li>
+        <li><strong>おかしいと思ったらすぐ止める</strong>：進行が戻っている、知らない履歴がある、などに気づいたら遊ぶのをやめて Discord で相談する。</li>
+      </ol>
+
+      <h3>バックアップについて</h3>
+      <ul>
+        <li><span class="tag official">公式</span>SaveSync はどのバージョンも自動でバックアップし、履歴から戻せます。</li>
+        <li><span class="tag official">公式</span>それとは別に、利用規約では「失いたくないセーブは<strong>自分でも独立したバックアップ</strong>をとっておくこと」を勧めています。</li>
+        <li><span class="tag unknown">未確認</span>Moon Sweepers のセーブファイルがPCのどこに保存されているかは、SaveSync の公式資料に書かれていませんでした。手動でバックアップする場合は、ゲーム側の情報で保存場所を確認してください。</li>
+        <li><span class="tag rule">ルール</span>大きく進めた日や、ボス戦・大きな買い物の前などは、セーブ履歴の版を Discord にメモしておく（例：「11/20 22時 B の版が正」）と、戻すときに迷いません。</li>
+      </ul>
+
+      <h3>Discord テンプレート</h3>
+      <div class="two-col">
+        <div class="card">
+          <h4>プレイ開始</h4>
+          <p><code style="white-space:normal">🧹 今から B ホストで Moon Sweepers やります（SaveSync 緑チェック確認済み）</code></p>
+        </div>
+        <div class="card">
+          <h4>プレイ終了</h4>
+          <p><code style="white-space:normal">✅ B 終了・SaveSync 同期完了しました（11/20 23:40）</code></p>
+        </div>
+      </div>
+
+      <h3>毎回のチェックリスト</h3>
+      <p class="small">チェックはこのブラウザだけに記録されます。「リセット」で全部外せます。</p>
+      <h4>プレイ前（ホスト）</h4>
+      <ul class="checklist" data-group="before">
+        <li><input type="checkbox" id="b1"><label for="b1">Discord で「今からホストします」と宣言した</label></li>
+        <li><input type="checkbox" id="b2"><label for="b2">前のホストの「同期完了」報告を確認した</label></li>
+        <li><input type="checkbox" id="b3"><label for="b3">Moon Sweepers が起動していない状態で SaveSync を開いた</label></li>
+        <li><input type="checkbox" id="b4"><label for="b4">セーブが有効化されていて、緑チェックになっている</label></li>
+      </ul>
+      <h4>プレイ後（ホスト）</h4>
+      <ul class="checklist" data-group="after">
+        <li><input type="checkbox" id="a1"><label for="a1">ゲーム内でセーブされたことを確認した</label></li>
+        <li><input type="checkbox" id="a2"><label for="a2">Moon Sweepers を完全に終了した</label></li>
+        <li><input type="checkbox" id="a3"><label for="a3">SaveSync で緑チェックを確認した</label></li>
+        <li><input type="checkbox" id="a4"><label for="a4">Discord で「同期完了」と報告した</label></li>
+      </ul>
+      <p><button type="button" id="reset-check" class="toc-btn" style="display:inline-block">チェックをリセット</button></p>
+    </section>
+
+    <!-- 9 -->
+    <section id="unknown">
+      <h2><span class="num">9</span>未確認事項の一覧</h2>
+      <p>2026-11-17 時点で、公式の資料から確認できなかったことです。実際に使って分かったら、3人で共有しておきましょう。</p>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>項目</th><th>状況</th></tr></thead>
+          <tbody>
+            <tr><td>3人全員が SaveSync を購入する必要があるか</td><td><span class="tag unknown">未確認</span>手順上は受け取る側も SaveSync を使う</td></tr>
+            <tr><td>初回起動時の設定画面の有無</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>自動同期のタイミング（ゲーム終了時／SaveSync 起動時など）</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>手動でアップロード・ダウンロードするボタンの有無</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>SaveSync を常に起動しておく必要があるか</td><td><span class="tag unknown">未確認</span>システムトレイに常駐するアイコンはある</td></tr>
+            <tr><td>緑チェック以外の状態表示の意味</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>交代のたびに Activate し直す必要があるか</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>ホストではない参加者が SaveSync を起動しておく必要があるか</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>2人が別々に遊んだときの競合の扱い（統合／選択／警告）</td><td><span class="tag unknown">未確認</span>上書き・消失がありうることだけ公式に記載あり</td></tr>
+            <tr><td>セーブ履歴が何世代・何日分残るか</td><td><span class="tag unknown">未確認</span></td></tr>
+            <tr><td>保存容量の上限</td><td><span class="tag unknown">未確認</span>公式サイト・ストアページに記載なし</td></tr>
+            <tr><td>Moon Sweepers のセーブファイルの場所</td><td><span class="tag unknown">未確認</span>SaveSync の公式資料に記載なし</td></tr>
+            <tr><td>Mac 対応</td><td><span class="tag unknown">未確認</span>公式に書かれているのは Windows と Linux（Proton）のみ</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- 10 -->
+    <section id="sources">
+      <h2><span class="num">10</span>参照元（確認日：2026-11-17）</h2>
+      <ul>
+        <li><a href="https://savesync.games/" target="_blank" rel="noopener">SaveSync 公式サイト（savesync.games）</a></li>
+        <li><a href="https://savesync.games/supported-games" target="_blank" rel="noopener">公式：対応ゲーム一覧</a></li>
+        <li><a href="https://savesync.games/games/moon-sweepers/" target="_blank" rel="noopener">公式：Moon Sweepers ページ</a></li>
+        <li><a href="https://www.savesync.games/savesync-agreement/" target="_blank" rel="noopener">公式：利用規約・プライバシー（Version 1.0・2026年7月30日）</a></li>
+        <li><a href="https://store.steampowered.com/app/3832010/" target="_blank" rel="noopener">Steam ストアページ：SaveSync: Co-op Save Sharing Made Easy</a></li>
+        <li><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3828844820" target="_blank" rel="noopener">Steam ガイド（公式・savesyncgames）：Moon Sweepers</a></li>
+        <li><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3584825910" target="_blank" rel="noopener">Steam ガイド（公式）：How to Play Co-op Games When the Host is Offline</a></li>
+        <li><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3650664773" target="_blank" rel="noopener">Steam ガイド（公式）：Save not uploading: stuck looping between 10% and 20%</a></li>
+        <li><a href="https://steamcommunity.com/app/3832010/guides/" target="_blank" rel="noopener">Steam ガイド一覧（SaveSync）</a></li>
+      </ul>
+      <p class="small">このページは非公式のファンメイドガイドです。SaveSync・Moon Sweepers の開発元とは関係ありません。SaveSync は早期アクセス中のため、画面や仕様が変わることがあります。最新の情報は公式を確認してください。</p>
+    </section>
+
+  </main>
+</div>
+
+<footer>SaveSync 日本語ガイド（非公式） ／ 情報確認日 2026-11-17</footer>
+
+<script>
+  // 目次の開閉（スマホ）
+  const tocBtn = document.querySelector('.topbar .toc-btn');
+  const toc = document.getElementById('toc');
+  tocBtn.addEventListener('click', () => {
+    const open = toc.classList.toggle('open');
+    tocBtn.setAttribute('aria-expanded', open);
+  });
+  toc.addEventListener('click', e => {
+    if (e.target.tagName === 'A') { toc.classList.remove('open'); tocBtn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  // 表示中のセクションを目次でハイライト
+  const links = [...toc.querySelectorAll('a')];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('main section').forEach(s => io.observe(s));
+
+  // チェックリストの状態をブラウザに保存（使えない環境でも動くように try/catch）
+  const KEY = 'savesync-guide-checks';
+  let state = {};
+  try { state = JSON.parse(localStorage.getItem(KEY) || '{}'); } catch (e) {}
+  const boxes = document.querySelectorAll('.checklist input');
+  boxes.forEach(b => {
+    b.checked = !!state[b.id];
+    b.addEventListener('change', () => {
+      state[b.id] = b.checked;
+      try { localStorage.setItem(KEY, JSON.stringify(state)); } catch (e) {}
+    });
+  });
+  document.getElementById('reset-check').addEventListener('click', () => {
+    boxes.forEach(b => b.checked = false);
+    state = {};
+    try { localStorage.removeItem(KEY); } catch (e) {}
+  });
+</script>
+</body>
+</html>
