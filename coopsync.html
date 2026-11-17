@@ -1,0 +1,548 @@
+<!doctype html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CoopSync 調査メモ</title>
+<meta name="description" content="CoopSync を Moon Sweepers の3人マルチプレイ用セーブ同期に流用できるかの技術調査（非公式）">
+<style>
+  :root {
+    --bg: #f6f7fb;
+    --surface: #ffffff;
+    --surface-2: #eef1f8;
+    --text: #1f2433;
+    --muted: #5b6275;
+    --line: #dde1ec;
+    --accent: #3b6fd8;
+    --accent-soft: #e3ebfb;
+    --mint: #1f9d7a;
+    --mint-soft: #ddf3ec;
+    --warn: #b4530a;
+    --warn-soft: #fff1e0;
+    --danger: #c0323a;
+    --danger-soft: #fde7e8;
+    --unk: #6b5bc4;
+    --unk-soft: #ece9fb;
+    --hero-1: #20264a;
+    --hero-2: #3a4580;
+    --radius: 14px;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #12141c;
+      --surface: #1b1e29;
+      --surface-2: #232736;
+      --text: #e7e9f1;
+      --muted: #a2a8ba;
+      --line: #2f3446;
+      --accent: #7ea3f2;
+      --accent-soft: #24304d;
+      --mint: #5fd1ae;
+      --mint-soft: #1b3830;
+      --warn: #f2a65a;
+      --warn-soft: #3a2a1a;
+      --danger: #f07a80;
+      --danger-soft: #3d2023;
+      --unk: #b2a6f5;
+      --unk-soft: #2a2645;
+      --hero-1: #0d1022;
+      --hero-2: #232a55;
+    }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; scroll-padding-top: 72px; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: "Hiragino Sans", "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic", Meiryo, sans-serif;
+    line-height: 1.8;
+    font-size: 16px;
+    -webkit-text-size-adjust: 100%;
+  }
+  a { color: var(--accent); }
+  img { max-width: 100%; }
+
+  /* ヘッダー */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 12px; padding: 10px 16px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(8px);
+    border-bottom: 1px solid var(--line);
+  }
+  .topbar .brand { font-weight: 700; text-decoration: none; color: var(--text); display: flex; align-items: center; gap: 8px; }
+  .toc-btn {
+    display: none; border: 1px solid var(--line); background: var(--surface-2); color: var(--text);
+    border-radius: 999px; padding: 6px 14px; font-size: 14px; cursor: pointer;
+  }
+
+  /* ヒーロー */
+  .hero {
+    position: relative; overflow: hidden;
+    background: radial-gradient(circle at 85% 20%, #f4f1e4 0 46px, transparent 47px),
+                linear-gradient(160deg, var(--hero-1), var(--hero-2));
+    color: #fff; padding: 56px 16px 64px;
+  }
+  .hero::before {
+    /* 星 */
+    content: ""; position: absolute; inset: 0;
+    background-image:
+      radial-gradient(2px 2px at 10% 30%, #fff8 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 30% 70%, #fff9 50%, transparent 51%),
+      radial-gradient(2px 2px at 55% 20%, #fff7 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 70% 60%, #fff8 50%, transparent 51%),
+      radial-gradient(2px 2px at 92% 75%, #fff6 50%, transparent 51%),
+      radial-gradient(1.5px 1.5px at 45% 45%, #fff6 50%, transparent 51%);
+  }
+  .hero::after {
+    /* 月面の地平線 */
+    content: ""; position: absolute; left: -10%; right: -10%; bottom: -60px; height: 110px;
+    background: radial-gradient(ellipse at 50% 0, #cfd3df 0, #9ea4b6 70%);
+    border-radius: 50% 50% 0 0;
+    opacity: .9;
+  }
+  .hero-inner { position: relative; z-index: 1; max-width: 960px; margin: 0 auto; }
+  .hero .eyebrow { display: inline-block; font-size: 13px; letter-spacing: .08em; background: #ffffff22; padding: 2px 10px; border-radius: 999px; }
+  .hero h1 { font-size: clamp(26px, 5vw, 40px); line-height: 1.35; margin: 14px 0 10px; }
+  .hero p { margin: 0; max-width: 640px; color: #e5e8f5; }
+  .hero .meta { margin-top: 16px; font-size: 13px; color: #c9cee6; }
+  .hero-cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
+  .btn { display: inline-block; padding: 10px 20px; border-radius: 999px; font-weight: 700; text-decoration: none; font-size: 15px; }
+  .btn.primary { background: #f4d35e; color: #20264a; }
+  .btn.ghost { border: 1px solid #ffffff66; color: #fff; }
+
+  /* 利点 */
+  .benefits { max-width: 1120px; margin: 0 auto; padding: 32px 16px 0; }
+  .benefits > h2 { font-size: clamp(22px, 4vw, 28px); margin: 0 0 6px; text-align: center; }
+  .benefits > .lead { text-align: center; color: var(--muted); margin: 0 0 20px; }
+  .benefit-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 14px; }
+  .benefit {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 18px; position: relative;
+  }
+  .benefit .ico { font-size: 30px; line-height: 1; display: block; margin-bottom: 10px; }
+  .benefit h3 { border: 0; padding: 0; margin: 0 0 6px; font-size: 17px; }
+  .benefit p { margin: 0; font-size: 14px; color: var(--muted); line-height: 1.7; }
+  .benefit.hero-benefit { grid-column: span 3; display: grid; grid-template-columns: auto 1fr; gap: 6px 16px; align-items: center;
+    background: linear-gradient(135deg, var(--mint-soft), var(--accent-soft)); border-color: transparent; }
+  .benefit.hero-benefit .ico { font-size: 44px; grid-row: span 2; margin: 0; }
+  .benefit.hero-benefit h3 { font-size: 20px; }
+  .benefit.hero-benefit p { color: var(--text); font-size: 15px; }
+  .ba { display: grid; grid-template-columns: 1fr auto 1fr; gap: 12px; align-items: stretch; margin-top: 18px; }
+  .ba .card { margin: 0; }
+  .ba .card.after { border: 2px solid var(--mint); }
+  .ba .mid { display: grid; place-items: center; font-size: 26px; color: var(--mint); }
+  .quick { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin-top: 18px; counter-reset: q; }
+  .quick div { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px 12px 52px; position: relative; font-size: 14px; }
+  .quick div::before { counter-increment: q; content: counter(q); position: absolute; left: 12px; top: 12px; width: 28px; height: 28px; border-radius: 50%;
+    background: var(--accent); color: #fff; display: grid; place-items: center; font-weight: 700; }
+  .quick b { display: block; font-size: 15px; }
+  .benefits .note { font-size: 13px; color: var(--muted); text-align: center; margin: 14px 0 0; }
+
+  /* レイアウト */
+  .layout { max-width: 1120px; margin: 0 auto; padding: 24px 16px 80px; display: grid; grid-template-columns: 240px minmax(0, 1fr); gap: 32px; }
+  nav.toc { position: sticky; top: 72px; align-self: start; max-height: calc(100vh - 90px); overflow: auto; }
+  nav.toc .toc-title { font-size: 13px; color: var(--muted); font-weight: 700; margin-bottom: 6px; }
+  nav.toc ol { list-style: none; margin: 0; padding: 0; counter-reset: toc; }
+  nav.toc li a {
+    display: block; padding: 6px 10px; border-radius: 8px; text-decoration: none; color: var(--muted); font-size: 14px; line-height: 1.5;
+  }
+  nav.toc li a:hover { background: var(--surface-2); color: var(--text); }
+  nav.toc li a.active { background: var(--accent-soft); color: var(--accent); font-weight: 700; }
+
+  main { min-width: 0; }
+  section {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    padding: 24px 22px; margin-bottom: 24px;
+  }
+  section > h2 {
+    margin: 0 0 14px; font-size: 22px; line-height: 1.4; display: flex; align-items: center; gap: 10px;
+  }
+  section > h2 .num {
+    flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: inline-grid; place-items: center; font-size: 15px;
+    background: var(--accent-soft); color: var(--accent);
+  }
+  h3 { font-size: 18px; margin: 26px 0 8px; padding-left: 10px; border-left: 4px solid var(--accent); line-height: 1.5; }
+  h4 { font-size: 16px; margin: 18px 0 6px; }
+  p { margin: 0 0 12px; }
+  ul, ol { padding-left: 1.4em; margin: 0 0 12px; }
+  li { margin-bottom: 4px; }
+  code, .ui {
+    font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+    background: var(--surface-2); border: 1px solid var(--line); border-radius: 6px; padding: 0 6px; font-size: .9em; white-space: nowrap;
+  }
+  .small { font-size: 13px; color: var(--muted); }
+
+  /* ラベル */
+  .tag { display: inline-block; font-size: 12px; font-weight: 700; padding: 1px 8px; border-radius: 999px; vertical-align: 2px; margin-right: 4px; white-space: nowrap; }
+  .tag.official { background: var(--mint-soft); color: var(--mint); }
+  .tag.rule { background: var(--accent-soft); color: var(--accent); }
+  .tag.unknown { background: var(--unk-soft); color: var(--unk); }
+  .tag.infer { background: var(--warn-soft); color: var(--warn); }
+
+  /* 注意ボックス */
+  .box { border-radius: 12px; padding: 14px 16px; margin: 14px 0; border: 1px solid; }
+  .box > :last-child { margin-bottom: 0; }
+  .box .box-title { font-weight: 700; margin-bottom: 6px; display: flex; gap: 6px; align-items: center; }
+  .box.danger { background: var(--danger-soft); border-color: color-mix(in srgb, var(--danger) 40%, transparent); }
+  .box.danger .box-title { color: var(--danger); }
+  .box.warn { background: var(--warn-soft); border-color: color-mix(in srgb, var(--warn) 40%, transparent); }
+  .box.warn .box-title { color: var(--warn); }
+  .box.info { background: var(--accent-soft); border-color: color-mix(in srgb, var(--accent) 35%, transparent); }
+  .box.info .box-title { color: var(--accent); }
+  .box.unknown { background: var(--unk-soft); border-color: color-mix(in srgb, var(--unk) 35%, transparent); }
+  .box.unknown .box-title { color: var(--unk); }
+
+  /* 凡例 */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 16px; font-size: 14px; margin: 8px 0 4px; }
+
+  /* 表 */
+  .table-wrap { overflow-x: auto; margin: 12px 0; }
+  table { border-collapse: collapse; width: 100%; font-size: 15px; min-width: 480px; }
+  th, td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+  th { background: var(--surface-2); font-weight: 700; }
+
+  /* ステップ（縦フロー） */
+  .steps { list-style: none; padding: 0; margin: 16px 0; counter-reset: step; }
+  .steps > li {
+    position: relative; padding: 0 0 18px 52px; margin: 0;
+  }
+  .steps > li::before {
+    counter-increment: step; content: counter(step);
+    position: absolute; left: 0; top: 0; width: 36px; height: 36px; border-radius: 50%;
+    display: grid; place-items: center; font-weight: 700;
+    background: var(--accent); color: #fff;
+  }
+  .steps > li::after {
+    content: ""; position: absolute; left: 17px; top: 38px; bottom: 2px; width: 2px; background: var(--line);
+  }
+  .steps > li:last-child::after { display: none; }
+  .steps > li .st { font-weight: 700; display: block; margin-bottom: 2px; padding-top: 5px; }
+  .steps > li.who-a::before { background: #d9822b; }
+  .steps > li.who-b::before { background: #2f9e6f; }
+  .steps > li.who-c::before { background: #7a5bd1; }
+
+  /* プレイヤーバッジ */
+  .p { display: inline-grid; place-items: center; width: 24px; height: 24px; border-radius: 50%; color: #fff; font-weight: 700; font-size: 13px; vertical-align: -5px; }
+  .p.a { background: #d9822b; } .p.b { background: #2f9e6f; } .p.c { background: #7a5bd1; }
+
+  /* 仕組み図 */
+  .diagram {
+    display: grid; grid-template-columns: 1fr auto 1fr auto 1fr; align-items: center; gap: 8px;
+    background: var(--surface-2); border-radius: 12px; padding: 16px; margin: 14px 0; text-align: center;
+  }
+  .node { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 8px; font-size: 14px; line-height: 1.5; }
+  .node b { display: block; font-size: 15px; }
+  .arrow { color: var(--muted); font-size: 20px; }
+
+  /* ホスト交代のローテーション図 */
+  .rotation { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0; }
+  .round { border: 1px solid var(--line); border-radius: 12px; overflow: hidden; background: var(--surface); }
+  .round .rh { background: var(--surface-2); padding: 6px 10px; font-weight: 700; font-size: 14px; }
+  .round .rb { padding: 10px; font-size: 14px; }
+  .round .host { display: flex; align-items: center; gap: 6px; font-weight: 700; margin-bottom: 6px; }
+  .round .world { margin-top: 8px; font-size: 13px; background: var(--mint-soft); color: var(--mint); border-radius: 8px; padding: 4px 8px; }
+
+  /* ケースカード */
+  .case { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; margin: 14px 0; }
+  .case h4 { margin-top: 0; }
+  .case dl { margin: 0; display: grid; grid-template-columns: max-content 1fr; gap: 6px 12px; }
+  .case dt { font-weight: 700; font-size: 14px; white-space: nowrap; }
+  .case dd { margin: 0; }
+
+  /* チェックリスト */
+  .checklist { list-style: none; padding: 0; }
+  .checklist li { padding: 8px 10px 8px 40px; position: relative; border-bottom: 1px dashed var(--line); margin: 0; }
+  .checklist li:last-child { border-bottom: 0; }
+  .checklist input { position: absolute; left: 10px; top: 13px; width: 18px; height: 18px; accent-color: var(--mint); }
+  .checklist label { cursor: pointer; }
+
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+  .card { border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; background: var(--surface); }
+  .card h4 { margin-top: 0; }
+
+  details { border: 1px solid var(--line); border-radius: 10px; padding: 10px 14px; margin: 10px 0; background: var(--surface); }
+  details summary { cursor: pointer; font-weight: 700; }
+  details[open] summary { margin-bottom: 8px; }
+
+  footer { text-align: center; font-size: 13px; color: var(--muted); padding: 0 16px 40px; }
+
+  /* スマホ */
+  @media (max-width: 860px) {
+    .layout { grid-template-columns: 1fr; padding-top: 16px; }
+    .toc-btn { display: inline-block; }
+    nav.toc {
+      position: fixed; top: 54px; left: 0; right: 0; max-height: 70vh; z-index: 19;
+      background: var(--surface); border-bottom: 1px solid var(--line); padding: 12px 16px;
+      box-shadow: 0 10px 30px #0003; display: none;
+    }
+    nav.toc.open { display: block; }
+    section { padding: 20px 16px; }
+    .diagram { grid-template-columns: 1fr; }
+    .diagram .arrow { transform: rotate(90deg); }
+    .rotation, .two-col { grid-template-columns: 1fr; }
+    .hero { background: radial-gradient(circle at 90% 9%, #f4f1e4 0 24px, transparent 25px), linear-gradient(160deg, var(--hero-1), var(--hero-2)); padding-top: 64px; }
+    .benefit-grid, .quick { grid-template-columns: 1fr; }
+    .benefit.hero-benefit { grid-column: auto; }
+    .ba { grid-template-columns: 1fr; }
+    .ba .mid { transform: rotate(90deg); }
+    .case dl { grid-template-columns: 1fr; }
+    .case dt { margin-top: 6px; }
+  }
+</style>
+</head>
+<body>
+
+<header class="topbar">
+  <a class="brand" href="#top"><span aria-hidden="true">🔬</span> CoopSync 調査メモ</a>
+  <button class="toc-btn" type="button" aria-expanded="false" aria-controls="toc">目次</button>
+</header>
+
+<div class="hero" id="top">
+  <div class="hero-inner">
+    <span class="eyebrow">Moon Sweepers ／ セーブ同期ツール 技術調査</span>
+    <h1>CoopSync は Moon Sweepers に<br>流用できる？</h1>
+    <p>ホストが不在でも遊べるようにするためのセーブ同期ツールとして、CoopSync を使えるかどうかを調べた結果です。</p>
+    <div class="hero-cta">
+      <a class="btn primary" href="#conclusion">結論を見る</a>
+      <a class="btn ghost" href="./">SaveSync ガイドへ</a>
+    </div>
+    <p class="meta">調査日：2026年11月17日 ／ 非公式の調査メモです。</p>
+  </div>
+</div>
+
+<div class="layout">
+  <nav class="toc" id="toc" aria-label="目次">
+    <div class="toc-title">目次</div>
+    <ol>
+      <li><a href="#conclusion">1. 結論</a></li>
+      <li><a href="#two">2. 「CoopSync」は2つある</a></li>
+      <li><a href="#mechanism">3. 仕組み</a></li>
+      <li><a href="#custom">4. カスタマイズ性</a></li>
+      <li><a href="#moon">5. Moon Sweepers への適用</a></li>
+      <li><a href="#risk">6. 技術的なリスク</a></li>
+      <li><a href="#compare">7. 3案の比較</a></li>
+      <li><a href="#suggest">8. おすすめ</a></li>
+      <li><a href="#sources">9. 参照元</a></li>
+    </ol>
+  </nav>
+
+  <main>
+
+    <section id="conclusion">
+      <h2><span class="num">1</span>結論</h2>
+      <div class="legend">
+        <span><span class="tag official">確認済み</span>公式サイト・ソースコードで確認した</span>
+        <span><span class="tag infer">推測</span>確認済みの情報から考えられること</span>
+        <span><span class="tag unknown">未確認</span>情報が見つからなかった</span>
+      </div>
+      <div class="box danger">
+        <div class="box-title">⛔ coopsync.app の CoopSync は、流用できるか判断できない（今は入手もできない）</div>
+        <ul>
+          <li><span class="tag official">確認済み</span>公式サイトがリンクしているソースコードのリポジトリと、ダウンロードリンクは、どちらも <strong>404</strong> でした。Wayback Machine にも記録がありません。</li>
+          <li><span class="tag unknown">未確認</span>設定ファイルで対応ゲームを追加できるかどうかを裏付ける資料がありません。</li>
+          <li><span class="tag official">確認済み</span>ライセンスは PolyForm Noncommercial です。ソースもないため、改造を前提にはできません。</li>
+        </ul>
+      </div>
+      <div class="box warn">
+        <div class="box-title">⚠ 同じ名前の別プロジェクト（LaneBirmingham 版）なら、設定だけで「同期」はできる。ただし改造が必要な見込み</div>
+        <ul>
+          <li><span class="tag official">確認済み</span>「Custom Folder」で好きなフォルダを選べば、<strong>再ビルドしなくても</strong>フォルダを丸ごと同期できます。</li>
+          <li><span class="tag official">確認済み</span>Moon Sweepers は、ホストのキャラクターを <code>local</code>、参加者を <code>steam-&lt;SteamID&gt;</code> として記録しています（SaveSync の公式ガイドによる）。LaneBirmingham 版は<strong>ファイルを丸ごとコピーするだけ</strong>なので、このキャラクターの入れ替えをしません（ソースで確認）。</li>
+          <li><span class="tag infer">推測</span>そのため、ホストが変わるたびにキャラクターがずれる見込みです。直すには<strong>セーブの形式を解析して書き換える改造</strong>が必要になります。</li>
+        </ul>
+      </div>
+      <div class="box info">
+        <div class="box-title">ℹ 結局どうする？</div>
+        <p>いちばん現実的なのは、Moon Sweepers に公式対応していて、キャラクターの入れ替えも機能に含まれている <a href="./">SaveSync（¥700）</a>です。無料にこだわる場合は、LaneBirmingham 版を<a href="#suggest">テスト用ワールドで試す</a>ところから始めます。</p>
+      </div>
+    </section>
+
+    <section id="two">
+      <h2><span class="num">2</span>「CoopSync」という名前のツールは2つある</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>coopsync.app 版（調査対象）</th><th>LaneBirmingham 版（参考）</th></tr></thead>
+          <tbody>
+            <tr><th>公開場所</th><td><a href="https://coopsync.app/" target="_blank" rel="noopener">coopsync.app</a></td><td><a href="https://github.com/LaneBirmingham/CoopSync" target="_blank" rel="noopener">GitHub: LaneBirmingham/CoopSync</a></td></tr>
+            <tr><th>ソースコード</th><td>リンク先（Vitalii-Kravchenko/CoopSync）が 404</td><td>公開されている</td></tr>
+            <tr><th>ダウンロード</th><td>リンク先が 404</td><td>v0.2.1（2026-07-11 公開）</td></tr>
+            <tr><th>ライセンス</th><td>PolyForm Noncommercial 1.0.0</td><td>MIT</td></tr>
+            <tr><th>対応ゲーム</th><td>一覧が公開されていない（Moon Sweepers の記載なし）</td><td>Satisfactory／The Planet Crafter／任意のフォルダ</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <p class="small">2つは別の開発者が作った別のソフトです。このページで「ソースで確認」と書いているのは、すべて LaneBirmingham 版のことです。</p>
+    </section>
+
+    <section id="mechanism">
+      <h2><span class="num">3</span>仕組み</h2>
+      <h3>coopsync.app 版（公式サイト・規約に書かれていることだけ）</h3>
+      <ul>
+        <li><span class="tag official">確認済み</span>Windows 10/11 向けの無料デスクトップアプリ（MODではない）。規約に「タイトルバー」「Settings」とあるので、GUI はあると思われます。</li>
+        <li><span class="tag official">確認済み</span>GitHub の OAuth Device Flow でログインし、<strong>友人と2人で所有する private リポジトリ</strong>にセーブを同期します。Git for Windows を別途インストールする必要があります。</li>
+        <li><span class="tag official">確認済み</span>インストール済みの Steam ゲームとセーブを自動で検出します（サイトの記載は「no manual paths」）。</li>
+        <li><span class="tag official">確認済み</span>友人がゲーム中かどうかを表示する機能があります（signal.coopsync.app を使う）。</li>
+        <li><span class="tag unknown">未確認</span>検出の仕組み、同期のタイミング、競合時の動作、ロック、対応ゲームの一覧、3人以上で使えるか（規約は「2人」と書いている）。</li>
+      </ul>
+
+      <h3>LaneBirmingham 版（ソースで確認）</h3>
+      <ul>
+        <li><span class="tag official">確認済み</span>Tauri（Rust と React）で作られた GUI アプリです。Git と GitHub CLI は、アプリから winget でインストールします。</li>
+        <li><span class="tag official">確認済み</span>共有するセーブ1つにつき、private リポジトリを1つ使います。友人は GitHub の collaborator として招待し、参加用のコードで加わります。</li>
+      </ul>
+      <ol class="steps">
+        <li><span class="st">Start Hosting</span>最新を取得して整合性を確認し、zip でバックアップを取ってから、リモートにロックをかけてセーブを反映します。</li>
+        <li><span class="st">ゲームを遊ぶ</span>この間、ほかの人はロックがかかっているので、ホストを始められません。</li>
+        <li><span class="st">Finish &amp; Publish</span>世代番号を1つ上げて push します。リモートが途中で動いていたら止まります。</li>
+        <li><span class="st">（中止するとき）Abort Hosting</span>変更をアップロードせずにロックを外します。</li>
+      </ol>
+    </section>
+
+    <section id="custom">
+      <h2><span class="num">4</span>カスタマイズ性（LaneBirmingham 版・ソースで確認）</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>確認したいこと</th><th>結果</th></tr></thead>
+          <tbody>
+            <tr><td>設定ファイルで対応ゲームを追加できるか</td><td>ゲームの定義は JSON（<code>src-tauri/game_profiles/*.json</code>）で書きます。ただし <code>include_str!</code> で<strong>ビルド時にアプリに埋め込まれる</strong>ので、追加するには<strong>再ビルドが必要</strong>です。JSON 1つと <code>game_profile.rs</code> の3か所を書き換えます。</td></tr>
+            <tr><td>セーブフォルダを手動で指定できるか</td><td><strong>できます</strong>。「Custom Folder」で好きなフォルダを選べ、そのフォルダの全ファイルが同期の対象になります。</td></tr>
+            <tr><td>未対応のゲームを登録できるか</td><td>Custom Folder で代わりにできます。ただし、ゲームが起動中かどうかの検知はなく、同期の対象を絞ることもできません。</td></tr>
+            <tr><td>セーブの形式に依存しているか</td><td>依存していません。ファイルを丸ごとコピーし、ハッシュで確認するだけです。</td></tr>
+            <tr><td>GitHub での同期部分を他に流用できるか</td><td>できます。ゲームに依存しない作りになっています。</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <details>
+        <summary>ゲーム定義（JSON）で設定できる項目</summary>
+        <ul>
+          <li><code>save_directories</code>：セーブフォルダの候補（<code>%USERPROFILE%</code> などの変数が使える）</li>
+          <li><code>save_folder_patterns</code>：ワールドごとのフォルダの見つけ方</li>
+          <li><code>file_patterns</code>／<code>exclude_patterns</code>：同期するファイル・しないファイル</li>
+          <li><code>process_name</code>：この exe が起動中は同期をブロックする</li>
+          <li><code>steam_cloud_conflict</code>：Steam Cloud と競合するかどうか</li>
+        </ul>
+      </details>
+    </section>
+
+    <section id="moon">
+      <h2><span class="num">5</span>Moon Sweepers への適用</h2>
+      <h3>セーブデータ</h3>
+      <ul>
+        <li><span class="tag infer">推測</span>保存場所は <code style="white-space:normal;word-break:break-all">%USERPROFILE%\AppData\LocalLow\DragDropGames\MoonSweepers\MoonSessions</code> です。第三者の攻略サイト1つに書かれていたもので、公式の資料ではありません。実際のPCで確認してください。</li>
+        <li><span class="tag infer">推測</span>同じサイトによると、このフォルダは Steam Cloud の同期対象です。</li>
+        <li><span class="tag official">確認済み</span>ワールドは5つのスロットに保存されます（SaveSync 公式ガイド）。</li>
+        <li><span class="tag unknown">未確認</span>ファイル名、拡張子、1ワールドが何ファイルでできているか、実行ファイル名（exe）。</li>
+      </ul>
+
+      <h3>プレイヤーの識別（いちばん注意が必要）</h3>
+      <div class="diagram" role="img" aria-label="ファイルを丸ごとコピーするとキャラクターがずれる図">
+        <div class="node"><b>A のPCで遊んだセーブ</b><code>local</code> = A のキャラクター<br><code>steam-B</code> = B のキャラクター</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>そのまま B に渡す</b>ファイルを丸ごとコピー</div>
+        <div class="arrow">→</div>
+        <div class="node"><b>B がホストすると</b>B が <code>local</code>（A のキャラクター）で遊ぶ</div>
+      </div>
+      <p><span class="tag official">確認済み</span>SaveSync の公式ガイドには、「手作業でセーブを渡して友人がホストすると、元の持ち主のキャラクターで遊ぶことになる」と書かれています。SaveSync はこの入れ替えを自動でしています。</p>
+      <p><span class="tag infer">推測</span>LaneBirmingham 版は入れ替えをしないので、このずれがそのまま起きます。coopsync.app 版が入れ替えをするかどうかは<span class="tag unknown">未確認</span>です（資料がない）。A があとから参加したときの扱い（新しいキャラクターが作られるかなど）も未確認です。</p>
+
+      <h3>当てはめた場合の見込み</h3>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>使い方</th><th>見込み</th></tr></thead>
+          <tbody>
+            <tr><td>そのまま使う</td><td>coopsync.app 版は入手できないので不可能。LaneBirmingham 版の Custom Folder なら、ファイルの同期だけはできる</td></tr>
+            <tr><td>設定の変更だけ</td><td>同期はできても、キャラクターのずれが残る</td></tr>
+            <tr><td>アプリの改造</td><td>キャラクターまで正しく扱うには、セーブの形式を解析して書き換える処理が必要。形式は公開されていない</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="risk">
+      <h2><span class="num">6</span>技術的なリスク</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>リスク</th><th>LaneBirmingham 版での対策</th><th>残る問題</th></tr></thead>
+          <tbody>
+            <tr><td>同時に更新したときの競合</td><td>ロックをかけ、push する前にリモートが動いていないか確認する。統合（マージ）はしない</td><td>片方の進行は捨てることになる</td></tr>
+            <tr><td>古いセーブでの上書き</td><td>Start Hosting で常に最新を取得する。ロックの有効期限は24時間</td><td>Start Hosting を押し忘れてゲームを起動すると防げない</td></tr>
+            <tr><td>ホスト交代のときの整合性</td><td>世代番号とチェックサムで確認する</td><td><strong>キャラクターの入れ替えはしない</strong></td></tr>
+            <tr><td>同期のタイミング</td><td>手動のボタン操作だけ</td><td>押し忘れると次の人に渡らない</td></tr>
+            <tr><td>セーブの破損</td><td>上書きの前に zip でバックアップを取る（10個まで保持）。履歴から戻せる</td><td>同期の対象が MoonSessions 全体になるので、ほかのスロットも巻き込む</td></tr>
+            <tr><td>Steam Cloud との競合</td><td>対応する設定項目はあるが、Custom Folder では無効</td><td><span class="tag infer">推測</span>Steam Cloud が古い状態を書き戻してくる可能性がある</td></tr>
+            <tr><td>3人で使う場合</td><td>collaborator として3人を招待できる</td><td>全員が GitHub アカウントを作り、ツール類をインストールする必要がある</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="compare">
+      <h2><span class="num">7</span>3案の比較</h2>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th></th><th>A. 設定変更だけで使う</th><th>B. 改造して対応させる</th><th>C. 専用ツールを自作する</th></tr></thead>
+          <tbody>
+            <tr><th>対象</th><td>coopsync.app 版は<strong>入手できず不可能</strong>。代わりに LaneBirmingham 版の Custom Folder</td><td>LaneBirmingham 版（MIT）を元にする。coopsync.app 版はソースがなく不可能</td><td>ゼロから作る</td></tr>
+            <tr><th>難しさ</th><td>★☆☆ 低</td><td>ゲーム定義の追加：★☆☆<br>キャラクターの入れ替え：★★★（セーブ形式の解析が必要）</td><td>★★★ 高</td></tr>
+            <tr><th>必要な作業</th><td>3人の GitHub 準備と、フォルダの指定</td><td>JSON 1つと Rust 3か所の変更、Rust・Bun・Tauri の開発環境、キャラクター入れ替え処理の作成</td><td>B の作業すべてに加えて、同期・ロック・GUI の作成</td></tr>
+            <tr><th>運用の手軽さ</th><td>ボタン操作だけ。ただしゲーム起動中かどうかの検知なし</td><td>ゲーム起動中の検知が使える</td><td>作り方による</td></tr>
+            <tr><th>リスク</th><td>キャラクターのずれ、ほかのスロットの巻き込み、Steam Cloud との競合</td><td>形式を解析して書き換えるので、セーブを壊すおそれ</td><td>B と同じリスクに加えて、保守の負担</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section id="suggest">
+      <h2><span class="num">8</span>おすすめ</h2>
+      <ol class="steps">
+        <li><span class="st">まずは SaveSync（¥700）</span>Moon Sweepers に公式対応していて、キャラクターの入れ替えも機能に含まれています。使い方は <a href="./">SaveSync 日本語ガイド</a>にまとめています。</li>
+        <li><span class="st">無料にこだわるなら、LaneBirmingham 版を試す</span>試す前に MoonSessions フォルダを手動でバックアップします。テスト用のワールドで、<strong>B がホストして A が参加したときにキャラクターがどうなるか</strong>を確かめます。</li>
+        <li><span class="st">問題が出たら改造するか判断する</span>キャラクターがずれる場合は、B 案（セーブ形式の解析と改造）に進むか、SaveSync に切り替えるかを決めます。</li>
+      </ol>
+    </section>
+
+    <section id="sources">
+      <h2><span class="num">9</span>参照元（確認日：2026-11-17）</h2>
+      <ul>
+        <li><a href="https://coopsync.app/" target="_blank" rel="noopener">coopsync.app</a>／<a href="https://coopsync.app/terms.html" target="_blank" rel="noopener">規約</a>／<a href="https://coopsync.app/privacy.html" target="_blank" rel="noopener">プライバシー</a></li>
+        <li>github.com/Vitalii-Kravchenko/CoopSync（公式サイトのリンク先。404）</li>
+        <li><a href="https://github.com/LaneBirmingham/CoopSync" target="_blank" rel="noopener">LaneBirmingham/CoopSync</a>：README、<code>docs/adding-game-support.md</code>、<code>docs/specification.md</code>、<code>src-tauri/src/game_profile.rs</code>、<code>src/App.tsx</code></li>
+        <li><a href="https://steamcommunity.com/sharedfiles/filedetails/?id=3828844820" target="_blank" rel="noopener">SaveSync 公式 Steam ガイド（Moon Sweepers）</a></li>
+        <li><a href="https://gamerblurb.com/guides/moon-sweepers-save-location-pc-steam" target="_blank" rel="noopener">GamerBlurb：Moon Sweepers のセーブ場所</a>（第三者）</li>
+      </ul>
+    </section>
+
+  </main>
+</div>
+
+<footer>CoopSync 調査メモ（非公式） ／ 調査日 2026-11-17 ／ <a href="./">SaveSync 日本語ガイドへ</a></footer>
+
+<script>
+  // 目次の開閉（スマホ）
+  const tocBtn = document.querySelector('.topbar .toc-btn');
+  const toc = document.getElementById('toc');
+  tocBtn.addEventListener('click', () => {
+    const open = toc.classList.toggle('open');
+    tocBtn.setAttribute('aria-expanded', open);
+  });
+  toc.addEventListener('click', e => {
+    if (e.target.tagName === 'A') { toc.classList.remove('open'); tocBtn.setAttribute('aria-expanded', 'false'); }
+  });
+
+  // 表示中のセクションを目次でハイライト
+  const links = [...toc.querySelectorAll('a')];
+  const io = new IntersectionObserver(entries => {
+    entries.forEach(en => {
+      if (en.isIntersecting) {
+        links.forEach(l => l.classList.toggle('active', l.getAttribute('href') === '#' + en.target.id));
+      }
+    });
+  }, { rootMargin: '-30% 0px -60% 0px' });
+  document.querySelectorAll('main section').forEach(s => io.observe(s));
+</script>
+</body>
+</html>
